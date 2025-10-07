@@ -10,9 +10,6 @@
 <br>
 
 ## <img src="https://upload.wikimedia.org/wikipedia/commons/4/4e/Gmail_Icon.png" width="20" style="vertical-align: middle;"/> Contact 
-## 📧 Contact  
-<img src="https://textanim.com/dl-gif-update.php" width="300" alt="vuthienson280104@gmail.com"><br>
-**Phuocv992@gmail.com**
-
+**vuthienson280104@gmail.com**
  <br>
 **Phuocv992@gmail.com**
