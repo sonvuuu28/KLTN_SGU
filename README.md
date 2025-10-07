@@ -10,22 +10,7 @@
 <br>
 
 ## <img src="https://upload.wikimedia.org/wikipedia/commons/4/4e/Gmail_Icon.png" width="20" style="vertical-align: middle;"/> Contact 
-## 📧 Contact
-<svg width="400" height="40">
-  <defs>
-    <linearGradient id="rainbow" x1="0" x2="100%" y1="0" y2="0">
-      <stop stop-color="red" offset="0%" />
-      <stop stop-color="orange" offset="20%" />
-      <stop stop-color="yellow" offset="40%" />
-      <stop stop-color="green" offset="60%" />
-      <stop stop-color="blue" offset="80%" />
-      <stop stop-color="violet" offset="100%" />
-    </linearGradient>
-  </defs>
-  <text x="0" y="30" font-size="20" font-weight="bold" fill="url(#rainbow)">
-    vuthienson280104@gmail.com
-  </text>
-</svg>
+![red](https://via.placeholder.com/15/f00/000000?text=+) **vuthienson280104@gmail.com**
 
  <br>
 **Phuocv992@gmail.com**
