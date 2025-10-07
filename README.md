@@ -11,7 +11,7 @@
 
 ## <img src="https://upload.wikimedia.org/wikipedia/commons/4/4e/Gmail_Icon.png" width="20" style="vertical-align: middle;"/> Contact 
 ## 📧 Contact  
-<img src="https://media.giphy.com/media/j3gsT2RsH9K0w/giphy.gif" width="300" alt="vuthienson280104@gmail.com"><br>
+<img src="https://textanim.com/dl-gif-update.php" width="300" alt="vuthienson280104@gmail.com"><br>
 **Phuocv992@gmail.com**
 
  <br>
