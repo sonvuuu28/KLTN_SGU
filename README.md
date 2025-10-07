@@ -11,5 +11,10 @@
 
 ## <img src="https://upload.wikimedia.org/wikipedia/commons/4/4e/Gmail_Icon.png" width="20" style="vertical-align: middle;"/> Contact 
 **vuthienson280104@gmail.com**
+<h2 align="center">😂 Funny GIF</h2>
+<p align="center">
+  <img src="https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExZDdmZzdzZWh4NjZtcWl5eWR5Z21pcjA0MXlhMjVoeDFlc2N5NGEzdyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/wqb5K5564JSlW/giphy.gif" width="300" alt="funny gif"/>
+</p>
+
  <br>
 **Phuocv992@gmail.com**
