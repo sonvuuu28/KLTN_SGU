@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Dashboard - Dự án đặt xe (Fixed)</title>
+  <meta name="description" content="Admin dashboard demo with Leaflet map. Includes robust loader for Leaflet to avoid 'L is not defined' errors."/>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#94a3b8;--accent:#06b6d4;--accent-2:#7c3aed}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial; background:linear-gradient(180deg,#081226 0%, #071427 100%);color:#e6eef6}
+    .app{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+    .sidebar{background:linear-gradient(180deg,#071227,#08132b);padding:20px;border-right:1px solid rgba(255,255,255,0.03)}
+    .brand{font-weight:700;letter-spacing:0.6px;margin-bottom:18px;display:flex;align-items:center;gap:10px}
+    .logo{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:inline-block}
+    nav ul{list-style:none;padding:0;margin:10px 0}
+    nav a{display:flex;gap:10px;align-items:center;padding:10px;border-radius:8px;color:var(--muted);text-decoration:none;margin-bottom:6px}
+    nav a.active, nav a:hover{background:rgba(255,255,255,0.03);color:#fff}
+    .sidebar .section-title{margin-top:18px;margin-bottom:8px;color:var(--muted);font-size:12px}
+    .content{padding:20px}
+
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+    .search{background:var(--card);padding:8px 12px;border-radius:10px;display:flex;gap:8px;align-items:center;border:1px solid rgba(255,255,255,0.02)}
+    .search input{background:transparent;border:0;outline:none;color:inherit}
+
+    .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px}
+    .card{background:var(--card);padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)}
+    .card h3{margin:0;font-size:14px;color:var(--muted)}
+    .card p{margin:8px 0 0;font-size:22px;font-weight:700}
+
+    .layout{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+    .panel{background:var(--card);padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)}
+    table{width:100%;border-collapse:collapse;color:#dbeafe}
+    th,td{padding:10px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.03);font-size:13px}
+    th{color:var(--muted);font-weight:600}
+    .btn{display:inline-block;padding:8px 12px;border-radius:8px;text-decoration:none;color:#071427;background:linear-gradient(90deg,var(--accent),var(--accent-2));font-weight:700}
+    .small{font-size:12px;color:var(--muted)}
+    .status{padding:6px 8px;border-radius:999px;font-weight:700;font-size:12px}
+    .green{background:#052e23;color:#7ef0be}
+    .orange{background:#3a2b03;color:#ffd59e}
+    .red{background:#3b0b0b;color:#ffb3b3}
+
+    .controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    .input,select{background:var(--card);border:1px solid rgba(255,255,255,0.03);padding:8px 10px;border-radius:8px;color:inherit}
+
+    /* map container used in panels and modal */
+    #map, #modalMap{height:320px;border-radius:8px;margin-top:8px}
+    .map-placeholder{height:320px;border-radius:8px;margin-top:8px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));display:flex;align-items:center;justify-content:center;color:var(--muted)}
+
+    /* modal */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.7);display:none;align-items:center;justify-content:center;padding:20px}
+    .modal{background:var(--card);max-width:940px;width:100%;border-radius:12px;padding:16px;border:1px solid rgba(255,255,255,0.04)}
+    .modal header{display:flex;justify-content:space-between;align-items:center}
+
+    /* responsive */
+    @media (max-width:980px){.cards{grid-template-columns:repeat(2,1fr)}.app{grid-template-columns:1fr}}
+    @media (max-width:600px){.cards{grid-template-columns:1fr}.layout{grid-template-columns:1fr}}
+
+    /* minimal leaflet overrides in case CSS loads late */
+    .leaflet-container{background:#e6eef6}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand"><span class="logo"></span><div>Admin</div></div>
+      <div class="small">Xin chào, Admin</div>
+      <nav>
+        <ul>
+          <li><a href="#" class="active">Dashboard</a></li>
+          <li><a href="#drivers">Tài xế</a></li>
+          <li><a href="#trips">Chuyến xe</a></li>
+          <li><a href="#customers">Khách hàng</a></li>
+          <li><a href="#promos">Khuyến mãi</a></li>
+          <li><a href="#settings">Cài đặt</a></li>
+        </ul>
+      </nav>
+      <div class="section-title">Hệ thống</div>
+      <div class="small">Phiên bản: 1.1 • Môi trường: staging</div>
+    </aside>
+
+    <main class="content">
+      <div class="topbar">
+        <div style="display:flex;gap:12px;align-items:center">
+          <div class="search" style="min-width:320px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="opacity:.7"><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="11" cy="11" r="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><input id="globalSearch" placeholder="Tìm kiếm tài xế, chuyến xe, khách..."/></div>
+          <div class="small" id="reportRange">Báo cáo: 01-10-2025 → 08-10-2025</div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center">
+          <div class="small">Thông báo (3)</div>
+          <div class="small">Admin@company.com</div>
+        </div>
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <h3>Chuyến đang hoạt động</h3>
+          <p id="activeTrips">124</p>
+          <div class="small">Tăng 8% so với hôm qua</div>
+        </div>
+        <div class="card">
+          <h3>Tài xế online</h3>
+          <p id="onlineDrivers">342</p>
+          <div class="small">Tổng đăng ký: 4,128</div>
+        </div>
+        <div class="card">
+          <h3>Doanh thu (hôm nay)</h3>
+          <p id="revenue">₫ 58,420,000</p>
+          <div class="small">Dự báo: ₫ 600,000,000 / tháng</div>
+        </div>
+        <div class="card">
+          <h3>Đơn khiếu nại</h3>
+          <p id="complaints">12</p>
+          <div class="small">Chờ xử lý: 4</div>
+        </div>
+      </div>
+
+      <!-- Controls + filters -->
+      <div class="panel">
+        <div class="controls">
+          <select id="filterStatus" class="input">
+            <option value="all">Tất cả trạng thái</option>
+            <option value="online">Tài xế: Online</option>
+            <option value="ontour">Tài xế: Đang chuyến</option>
+            <option value="offline">Tài xế: Offline</option>
+          </select>
+          <select id="vehicleType" class="input">
+            <option value="all">Tất cả loại xe</option>
+            <option value="car">Xe hơi</option>
+            <option value="bike">Xe máy</option>
+          </select>
+          <input id="minRating" class="input" type="number" placeholder="Đánh giá tối thiểu" min="0" max="5" step="0.1" />
+          <button id="applyFilters" class="btn">Áp dụng bộ lọc</button>
+          <div style="flex:1"></div>
+          <button id="addPromo" class="btn">Tạo khuyến mãi</button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 420px;gap:16px;margin-top:8px">
+          <div>
+            <h3 style="margin:0 0 8px 0">Danh sách tài xế</h3>
+            <table id="driversTable">
+              <thead><tr><th>ID</th><th>Tên</th><th>Xe</th><th>Trạng thái</th><th>Đánh giá</th><th>Hành động</th></tr></thead>
+              <tbody>
+                <!-- rows populated by JS -->
+              </tbody>
+            </table>
+          </div>
+
+          <aside>
+            <h3 style="margin:0">Bản đồ - Tài xế (thực tế)</h3>
+            <div id="mapContainer">
+              <!-- if Leaflet loads we'll render into #map, otherwise show placeholder -->
+              <div id="map" style="display:none"></div>
+              <div id="mapPlaceholder" class="map-placeholder">Bản đồ đang chờ tải (Leaflet)</div>
+            </div>
+            <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
+              <button id="centerAll" class="btn">Tập trung tất cả</button>
+              <button id="followNew" class="btn">Bật tự động cập nhật</button>
+            </div>
+          </aside>
+        </div>
+      </div>
+
+      <!-- Recent trips -->
+      <div class="layout" style="margin-top:16px">
+        <section class="panel">
+          <h2 style="margin-top:0">Chuyến xe gần đây</h2>
+          <table>
+            <thead>
+              <tr><th>Mã</th><th>Tài xế</th><th>Khách</th><th>Khoảng cách</th><th>Trạng thái</th><th>Giờ</th><th></th></tr>
+            </thead>
+            <tbody id="tripsTable">
+              <!-- populated by JS -->
+            </tbody>
+          </table>
+        </section>
+
+        <aside class="panel">
+          <h3 style="margin-top:0">Tổng quan tài xế</h3>
+          <table>
+            <thead><tr><th>Tên</th><th>Số chuyến</th><th>Trạng thái</th></tr></thead>
+            <tbody id="driverSummary">
+              <!-- populated by JS -->
+            </tbody>
+          </table>
+        </aside>
+      </div>
+
+      <!-- Customer Management -->
+    <section id="customers" class="panel" style="margin-top: 16px;">
+    <h2 style="margin-top: 0;">Quản lý khách hàng</h2>
+    <div class="controls">
+        <input id="customerSearch" class="input" placeholder="Tìm kiếm khách hàng..." />
+        <select id="customerStatus" class="input">
+        <option value="all">Tất cả trạng thái</option>
+        <option value="active">Hoạt động</option>
+        <option value="inactive">Ngưng hoạt động</option>
+        </select>
+    </div>
+
+    <table id="customersTable">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Họ tên</th>
+            <th>Email</th>
+            <th>Số điện thoại</th>
+            <th>Số chuyến đi</th>
+            <th>Tổng chi tiêu (VNĐ)</th>
+            <th>Trạng thái</th>
+            <th>Hành động</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    </section>
+
+
+      <!-- Promo management -->
+      <section style="margin-top:16px" class="panel">
+        <h2 style="margin-top:0">Quản lý khuyến mãi</h2>
+        <table>
+          <thead><tr><th>Mã</th><th>Mô tả</th><th>Trạng thái</th><th>Hành động</th></tr></thead>
+          <tbody id="promosTable">
+            <!-- populated by JS -->
+          </tbody>
+        </table>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Modal: trip detail (includes map) -->
+  <div id="modal" class="modal-backdrop">
+    <div class="modal" role="dialog" aria-modal="true">
+      <header>
+        <h3 id="modalTitle">Chi tiết chuyến</h3>
+        <button id="closeModal" class="btn">Đóng</button>
+      </header>
+      <div style="display:grid;grid-template-columns:1fr 320px;gap:12px;margin-top:12px">
+        <div>
+          <div id="modalInfo"></div>
+          <div id="modalMap" style="display:none"></div>
+          <div id="modalMapPlaceholder" class="map-placeholder">Bản đồ chi tiết đang chờ tải</div>
+        </div>
+        <aside>
+          <h4>Thông tin tài xế</h4>
+          <div id="modalDriver"></div>
+          <h4 style="margin-top:12px">Thông tin khách</h4>
+          <div id="modalCustomer"></div>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Robust loader for Leaflet to avoid 'L is not defined'.
+    // Tries multiple CDNs and loads CSS if missing. Calls callback(ok) with boolean ok.
+    function loadLeaflet(cb){
+      if(window.L){ cb(true); return; }
+      const cssHref = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      const jsCandidates = [
+        'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js'
+      ];
+
+      // ensure CSS
+      if(!document.querySelector('link[href*="leaflet"]')){
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = cssHref;
+        document.head.appendChild(link);
+      }
+
+      let i = 0;
+      function tryLoad(){
+        if(i >= jsCandidates.length){ cb(false); return; }
+        const src = jsCandidates[i++];
+        const s = document.createElement('script');
+        s.src = src;
+        s.async = true;
+        s.onload = ()=>{ console.info('Leaflet loaded from', src); cb(!!window.L); };
+        s.onerror = ()=>{ console.warn('Failed to load Leaflet from', src); s.remove(); tryLoad(); };
+        document.head.appendChild(s);
+      }
+      tryLoad();
+    }
+
+    // Wait for DOM ready
+    function onReady(fn){ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', fn); else fn(); }
+
+    onReady(()=>{
+      // load leaflet, then init app (mapAvailable true/false)
+      loadLeaflet((ok)=>{ try{ initApp(!!ok); }catch(err){ console.error('Init failed', err); } });
+    });
+
+    function initApp(mapAvailable){
+      // Simulated dataset (replace with real API calls)
+      const SIMULATED_DRIVERS = [
+        {id:'DRV001', name:'Nguyễn Văn A', vehicle:'Toyota Vios', type:'car', rating:4.8, status:'online', lat:10.772, lng:106.698, trips:120},
+        {id:'DRV002', name:'Trần H', vehicle:'Honda Vision', type:'bike', rating:4.6, status:'ontour', lat:10.775, lng:106.695, trips:98},
+        {id:'DRV003', name:'Phạm K', vehicle:'Honda Wave', type:'bike', rating:4.2, status:'offline', lat:10.768, lng:106.702, trips:45},
+        {id:'DRV004', name:'Lê M', vehicle:'Innosa', type:'car', rating:4.9, status:'online', lat:10.7705, lng:106.694, trips:220}
+      ];
+
+      const SIMULATED_TRIPS = [
+        {id:'#TR00124', driver:'Nguyễn Văn A', customer:'Phạm B', distance:'12.4km', status:'ontrip', time:'08:12', pickup:[10.772,106.698], dropoff:[10.780,106.705]},
+        {id:'#TR00123', driver:'Trần H', customer:'Nguyễn D', distance:'3.8km', status:'completed', time:'07:50', pickup:[10.775,106.695], dropoff:[10.779,106.699]},
+        {id:'#TR00122', driver:'Hoàng E', customer:'Võ F', distance:'24.0km', status:'cancelled', time:'07:30', pickup:[10.768,106.702], dropoff:[10.760,106.710]}
+      ];
+
+      const SIMULATED_CUSTOMERS = [
+        { id: 'C001', name: 'Nguyễn Văn Nam', email: 'nam@gmail.com', phone: '0901234567', trips: 24, spent: 1450000, status: 'Hoạt động' },
+        { id: 'C002', name: 'Trần Thị Hoa', email: 'hoa@gmail.com', phone: '0907654321', trips: 5, spent: 300000, status: 'Ngưng hoạt động' },
+        { id: 'C003', name: 'Lê Minh Tuấn', email: 'tuan@gmail.com', phone: '0911222333', trips: 41, spent: 2780000, status: 'Hoạt động' },
+        ];
+
+      // state
+      const state = {activeTrips: SIMULATED_TRIPS.filter(t=>t.status==='ontrip').length, onlineDrivers: SIMULATED_DRIVERS.filter(d=>d.status!=='offline').length, revenue:'₫ 58,420,000', complaints:12};
+
+      // populate stat cards
+      document.getElementById('activeTrips').textContent = state.activeTrips;
+      document.getElementById('onlineDrivers').textContent = state.onlineDrivers;
+      document.getElementById('revenue').textContent = state.revenue;
+      document.getElementById('complaints').textContent = state.complaints;
+
+      // UI render helpers
+      function formatStatus(s){
+        if(s==='online') return '<span class="status green">Online</span>';
+        if(s==='ontour' || s==='ontrip') return '<span class="status orange">Đang chuyến</span>';
+        return '<span class="status red">Offline</span>';
+      }
+
+      function createDriverRow(driver){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${driver.id}</td>
+          <td>${driver.name}</td>
+          <td>${driver.vehicle}</td>
+          <td>${formatStatus(driver.status)}</td>
+          <td>${driver.rating.toFixed(1)}</td>
+          <td>
+            <button class="btn" data-action="view" data-id="${driver.id}">Xem</button>
+            <button class="btn" data-action="toggle" data-id="${driver.id}">${driver.status==='online'?'Khóa':'Mở'}</button>
+          </td>
+        `;
+        return tr;
+      }
+
+      function renderDrivers(drivers){
+        const tbody = document.querySelector('#driversTable tbody'); tbody.innerHTML='';
+        drivers.forEach(d=>tbody.appendChild(createDriverRow(d)));
+      }
+
+      function tripStatusBadge(s){
+        if(s==='ontrip') return '<span class="status green">Đang đi</span>';
+        if(s==='completed') return '<span class="status orange">Hoàn thành</span>';
+        return '<span class="status red">Hủy</span>';
+      }
+
+      function renderTrips(trips){
+        const tbody = document.getElementById('tripsTable'); tbody.innerHTML='';
+        trips.forEach(t=>{
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${t.id}</td><td>${t.driver}</td><td>${t.customer}</td><td>${t.distance}</td><td>${tripStatusBadge(t.status)}</td><td>${t.time}</td><td><button class="btn" data-action="trip" data-id="${t.id}">Chi tiết</button></td>`;
+          tbody.appendChild(tr);
+        });
+      }
+
+      function renderCustomers() {
+        const tbody = document.querySelector('#customersTable tbody');
+        tbody.innerHTML = SIMULATED_CUSTOMERS.map(c => `
+            <tr>
+            <td>${c.id}</td>
+            <td>${c.name}</td>
+            <td>${c.email}</td>
+            <td>${c.phone}</td>
+            <td>${c.trips}</td>
+            <td>${c.spent.toLocaleString()}</td>
+            <td>${c.status}</td>
+            <td>
+                <button class="btn small" onclick="viewCustomer('${c.id}')">Xem</button>
+                <button class="btn small" onclick="deleteCustomer('${c.id}')">Xóa</button>
+            </td>
+            </tr>
+        `).join('');
+        }
+
+      function renderPromos(promos){
+        const tbody = document.getElementById('promosTable'); tbody.innerHTML='';
+        promos.forEach(p=>{
+          const tr = document.createElement('tr');
+          const statusHtml = p.active ? '<span class="status green">Đang chạy</span>' : '<span class="status red">Dừng</span>';
+          tr.innerHTML = `<td>${p.code}</td><td>${p.desc}</td><td>${statusHtml}</td><td><button class="btn" data-action="promo" data-id="${p.code}">Chỉnh sửa</button></td>`;
+          tbody.appendChild(tr);
+        });
+      }
+
+      function renderDriverSummary(drivers){
+        const tbody = document.getElementById('driverSummary'); tbody.innerHTML='';
+        drivers.forEach(d=>{
+          const tr = document.createElement('tr'); tr.innerHTML = `<td>${d.name}</td><td>${d.trips}</td><td>${formatStatus(d.status)}</td>`; tbody.appendChild(tr);
+        });
+      }
+
+      // sample promos
+      const promos = [ {code:'PRM50', desc:'Giảm 50% tối đa ₫30k', active:true}, {code:'WELCOME', desc:'Khách mới: ₫25k', active:false} ];
+
+      // init UI
+      renderDrivers(SIMULATED_DRIVERS);
+      renderTrips(SIMULATED_TRIPS);
+      renderDriverSummary(SIMULATED_DRIVERS.slice(0,3));
+      renderCustomers();
+      renderPromos(promos);
+
+      // Map-related variables
+      let map = null;
+      const driverMarkers = new Map();
+
+      function safeAddMarker(d){
+        if(!map || !window.L) return;
+        const key = d.id;
+        if(driverMarkers.has(key)){
+          driverMarkers.get(key).setLatLng([d.lat,d.lng]);
+        } else {
+          const icon = L.divIcon({className:'driver-icon', html:`<div style="background:linear-gradient(90deg,var(--accent),var(--accent-2));width:12px;height:12px;border-radius:6px;border:2px solid #fff"></div>`, iconSize:[18,18]});
+          const m = L.marker([d.lat,d.lng], {icon}).addTo(map).bindPopup(`<strong>${d.name}</strong><br/>${d.vehicle}`);
+          driverMarkers.set(key,m);
+        }
+      }
+
+      function updateMarkers(drivers){
+        if(!map || !window.L) return;
+        drivers.forEach(d=> safeAddMarker(d));
+      }
+
+      // initialize map if available
+      if(mapAvailable && window.L){
+        try{
+          document.getElementById('map').style.display = 'block';
+          document.getElementById('mapPlaceholder').style.display = 'none';
+          map = L.map('map', {zoomControl:true}).setView([10.772, 106.698], 13);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:'© OpenStreetMap'}).addTo(map);
+          updateMarkers(SIMULATED_DRIVERS);
+        }catch(err){
+          console.error('Leaflet init error:', err);
+        }
+      } else {
+        // map not available - keep placeholder visible
+        document.getElementById('map').style.display = 'none';
+        document.getElementById('mapPlaceholder').style.display = 'flex';
+        document.getElementById('modalMap').style.display = 'none';
+        document.getElementById('modalMapPlaceholder').style.display = 'flex';
+      }
+
+      // center all markers
+      document.getElementById('centerAll').addEventListener('click', ()=>{
+        if(!map || driverMarkers.size===0) return alert('Không có marker để tập trung');
+        const group = L.featureGroup(Array.from(driverMarkers.values()));
+        map.fitBounds(group.getBounds().pad(0.3));
+      });
+
+      // simulate driver movement (random walk) to demonstrate realtime updates
+      let autoUpdate = false;
+      document.getElementById('followNew').addEventListener('click', (e)=>{ autoUpdate = !autoUpdate; e.target.textContent = autoUpdate? 'Tắt tự động cập nhật':'Bật tự động cập nhật'; });
+
+      function randomMove(drivers){
+        drivers.forEach(d=>{
+          if(Math.random()<0.6 && d.status!=='offline'){
+            d.lat += (Math.random()-0.5)/200;
+            d.lng += (Math.random()-0.5)/200;
+          }
+        });
+      }
+
+      // polling loop (in production, replace with websocket listener)
+      setInterval(()=>{
+        if(autoUpdate) randomMove(SIMULATED_DRIVERS);
+        if(map) updateMarkers(SIMULATED_DRIVERS);
+      }, 3000);
+
+      // Global search filtering
+      document.getElementById('globalSearch').addEventListener('input', (e)=>{
+        const q = e.target.value.toLowerCase();
+        const filtered = SIMULATED_DRIVERS.filter(d=> (d.name + d.id + d.vehicle).toLowerCase().includes(q));
+        renderDrivers(filtered);
+        const filteredTrips = SIMULATED_TRIPS.filter(t=> (t.id + t.driver + t.customer).toLowerCase().includes(q));
+        renderTrips(filteredTrips);
+      });
+
+      // row action handlers (delegation)
+      document.addEventListener('click', (e)=>{
+        const btn = e.target.closest('button'); if(!btn) return;
+        const action = btn.getAttribute('data-action');
+        const id = btn.getAttribute('data-id');
+        if(action==='view'){
+          const driver = SIMULATED_DRIVERS.find(d=>d.id===id);
+          if(driver) showDriverDialog(driver);
+        } else if(action==='toggle'){
+          const driver = SIMULATED_DRIVERS.find(d=>d.id===id);
+          if(driver){ driver.status = (driver.status==='online'?'offline':'online'); renderDrivers(SIMULATED_DRIVERS); if(map) updateMarkers(SIMULATED_DRIVERS); }
+        } else if(action==='trip'){
+          const trip = SIMULATED_TRIPS.find(t=>t.id===id);
+          if(trip) showTripModal(trip);
+        }
+      });
+
+      // show driver quick dialog (simple alert for demo)
+      function showDriverDialog(driver){
+        alert(`${driver.name} — ${driver.vehicle}\nTrạng thái: ${driver.status}\nĐánh giá: ${driver.rating}\nSố chuyến: ${driver.trips}`);
+      }
+
+      // modal handling
+      const modal = document.getElementById('modal');
+      const closeModalBtn = document.getElementById('closeModal');
+      closeModalBtn.addEventListener('click', closeModal);
+      modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
+
+      let modalMap = null, modalMarkerA = null, modalMarkerB = null, modalLines = null;
+
+      function showTripModal(trip){
+        document.getElementById('modalTitle').textContent = `Chi tiết ${trip.id}`;
+        document.getElementById('modalInfo').innerHTML = `<p><strong>Khoảng cách:</strong> ${trip.distance}</p><p><strong>Trạng thái:</strong> ${trip.status}</p><p><strong>Thời gian:</strong> ${trip.time}</p>`;
+        document.getElementById('modalDriver').innerHTML = `<p>${trip.driver}</p><p><strong>Xe:</strong> (không có dữ liệu chi tiết)</p>`;
+        document.getElementById('modalCustomer').innerHTML = `<p>${trip.customer}</p>`;
+
+        modal.style.display = 'flex';
+
+        // if map available initialize modal map
+        setTimeout(()=>{
+          if(mapAvailable && window.L){
+            document.getElementById('modalMap').style.display = 'block';
+            document.getElementById('modalMapPlaceholder').style.display = 'none';
+            try{
+              if(!modalMap){
+                modalMap = L.map('modalMap', {zoomControl:false}).setView(trip.pickup, 13);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19}).addTo(modalMap);
+              } else {
+                modalMap.invalidateSize();
+                modalMap.setView(trip.pickup, 13);
+              }
+
+              if(modalMarkerA) modalMap.removeLayer(modalMarkerA);
+              if(modalMarkerB) modalMap.removeLayer(modalMarkerB);
+              if(modalLines) modalMap.removeLayer(modalLines);
+
+              modalMarkerA = L.marker(trip.pickup).addTo(modalMap).bindPopup('Điểm đón');
+              modalMarkerB = L.marker(trip.dropoff).addTo(modalMap).bindPopup('Điểm đến');
+              modalLines = L.polyline([trip.pickup, trip.dropoff]).addTo(modalMap);
+              modalMap.fitBounds(L.featureGroup([modalMarkerA, modalMarkerB]).getBounds().pad(0.3));
+            }catch(err){ console.error('modal map init error', err); }
+          } else {
+            // show placeholder message
+            document.getElementById('modalMap').style.display = 'none';
+            document.getElementById('modalMapPlaceholder').style.display = 'flex';
+          }
+        }, 200);
+      }
+
+      function closeModal(){ modal.style.display='none'; }
+
+      // filters apply
+      document.getElementById('applyFilters').addEventListener('click', ()=>{
+        const status = document.getElementById('filterStatus').value;
+        const type = document.getElementById('vehicleType').value;
+        const minRating = parseFloat(document.getElementById('minRating').value) || 0;
+        let filtered = SIMULATED_DRIVERS.slice();
+        if(status!=='all'){
+          if(status==='online') filtered = filtered.filter(d=>d.status==='online');
+          if(status==='ontour') filtered = filtered.filter(d=>d.status==='ontour' || d.status==='ontrip');
+          if(status==='offline') filtered = filtered.filter(d=>d.status==='offline');
+        }
+        if(type!=='all') filtered = filtered.filter(d=>d.type===type);
+        if(minRating>0) filtered = filtered.filter(d=>d.rating>=minRating);
+        renderDrivers(filtered);
+      });
+
+      // handle create promo button (simple prompt demo)
+      document.getElementById('addPromo').addEventListener('click', ()=>{
+        const code = prompt('Mã khuyến mãi (ví dụ: NEW50)'); if(!code) return;
+        const desc = prompt('Mô tả ngắn');
+        promos.push({code, desc, active:true}); renderPromos(promos);
+      });
+
+      // initial simulated summary updater
+      function refreshSummary(){
+        document.getElementById('activeTrips').textContent = SIMULATED_TRIPS.filter(t=>t.status==='ontrip').length;
+        document.getElementById('onlineDrivers').textContent = SIMULATED_DRIVERS.filter(d=>d.status!=='offline').length;
+        renderDriverSummary(SIMULATED_DRIVERS.slice(0,5));
+      }
+      setInterval(refreshSummary, 4000);
+
+      // Expose some helpers for debugging in console
+      window.__ADMIN_DASH__ = { SIMULATED_DRIVERS, SIMULATED_TRIPS, promos };
+
+    } // end initApp
+  </script>
+</body>
+</html>
